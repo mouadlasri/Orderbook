@@ -7,6 +7,16 @@
 #include <sstream>
 
 
+struct Order {
+    int64_t timestamp;
+    int64_t orderId;
+    std::string symbol; // AAPL, GOOG, MSFT, etc. (SCS, SCH in this case)
+    std::string side; // BUY, SELL
+    std::string category; // NEW, CANCEL, TRADE (Modify)
+    double price; 
+    int quantity;
+};
+
 
 
 int main() {
