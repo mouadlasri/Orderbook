@@ -1,20 +1,60 @@
-// Orderbook.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
 
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <sstream>
 
-int main()
-{
-    std::cout << "Hello World!\n";
+
+
+
+int main() {
+
+    std::ifstream file("SCH.log"); // Replace "your_file.csv" with your file name
+    if (!file.is_open()) {
+        std::cerr << "Error opening file!" << std::endl;
+        return 1;
+    }
+
+    int linesToRead = 10; // REMOVE: Read only 10 lines for now for testing purposes
+
+    std::string line;
+    while (std::getline(file, line) && linesToRead > 0)  // REMOVE: linesToRead > 0 to read the entire file
+    { 
+        std::vector<std::string> tokens;
+        std::istringstream tokenStream(line);
+        std::string token;
+
+        while (tokenStream >> token) { // Using space (' ') as the delimiter
+            tokens.push_back(token);
+        }
+
+        // Accessing individual fields
+        if (tokens.size() >= 7) { // Ensure at least 7 fields are present
+            std::string epoch = tokens[0];
+            std::string orderId = tokens[1];
+            std::string symbol = tokens[2];
+            std::string orderSide = tokens[3];
+            std::string orderCategory = tokens[4];
+            std::string price = tokens[5];
+            std::string quantity = tokens[6];
+
+            // Process or use the extracted data as needed
+            // Example: Print the fields
+            std::cout << "Epoch: " << epoch << ", Order ID: " << orderId << ", Symbol: " << symbol
+                << ", Order Side: " << orderSide << ", Order Category: " << orderCategory
+                << ", Price: " << price << ", Quantity: " << quantity << std::endl;
+        }
+        else {
+            std::cerr << "Invalid number of fields in line: " << line << std::endl;
+        }
+
+        linesToRead--;
+    }
+
+    file.close();
+ 
+    return 0;
+    
 }
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
