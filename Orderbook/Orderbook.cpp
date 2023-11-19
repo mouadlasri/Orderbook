@@ -247,7 +247,7 @@ private:
             newSnapshot.timestamp = order.timestamp;
             newSnapshot.symbol = symbol;
 
-            // Get top 5 bids and asks if they exist (ie: get the first five elements of the bids and asks maps if they exist)
+            // Get top n bids and asks if they exist (ie: get the first N elements of the bids and asks if they exist)
             getTopBids(newSnapshot, numberOfFields);
             getTopAsks(newSnapshot, numberOfFields);
 
@@ -286,7 +286,7 @@ private:
     }
 
     void printSnapshots() {
-        
+        // Print the snapshots
         for (auto& snapshot : snapshots) {
             std::cout << snapshot.symbol << ", " << snapshot.timestamp << ", ";
             for (auto& bid : snapshot.bidSnapshots) {
@@ -340,15 +340,66 @@ private:
         }
     }
 
+    void saveSnapshotsTimeToFile(bool singleSnapshot) {
+        // Save the snapshots to a file
+        std::ofstream snapshotsFile("snapshots.txt");
+        if (!snapshotsFile.is_open()) {
+            std::cerr << "Unable to open file for writing!" << std::endl;
+            return;
+        }
 
+            // If we only want to output the last snapshot at snapshotEndTime (only one time is given which is the end time)
+        if (singleSnapshot) {
+			// Get the last snapshot
+			Snapshot snapshot = snapshots.back();
+			snapshotsFile << snapshot.symbol << ", " << snapshot.timestamp << ", ";
+			for (auto& bid : snapshot.bidSnapshots) {
+				snapshotsFile << bid << " ";
+			}
+			snapshotsFile << "X ";
+
+			for (auto& ask : snapshot.askSnapshots) {
+				snapshotsFile << ask << "  ";
+			}
+			snapshotsFile << std::endl;
+		}
+		else { // if we want to output a range of snapshots from snapshotStartTime to snapshotEndTime
+			for (const auto& snapshot : snapshots) {
+				snapshotsFile << snapshot.symbol << ", " << snapshot.timestamp << ", ";
+				for (auto& bid : snapshot.bidSnapshots) {
+					snapshotsFile << bid << " ";
+				}
+				snapshotsFile << "X ";
+
+				for (auto& ask : snapshot.askSnapshots) {
+					snapshotsFile << ask << "  ";
+				}
+				snapshotsFile << std::endl;
+			}
+		}
+
+        /*for (const auto& snapshot : snapshots) {
+            snapshotsFile << snapshot.symbol << ", " << snapshot.timestamp << ", ";
+            for (auto& bid : snapshot.bidSnapshots) {
+                snapshotsFile << bid << " ";
+            }
+            snapshotsFile << "X ";
+
+            for (auto& ask : snapshot.askSnapshots) {
+                snapshotsFile << ask << "  ";
+            }
+            snapshotsFile << std::endl;
+        }*/
+        snapshotsFile.close();
+    }
 };
 
 
-void ReadFile(const std::string& filePath, int64_t snapshotStartTime, int64_t snapshotEndTime)
+void ReadFile(const std::string& filePath, int64_t snapshotStartTime=0, int64_t snapshotEndTime=0)
 {
     OrderBook orderbook;
     int numberOfFields = 5; // can be modified to get more or less fields for the snapshots
-    std::ifstream file("SCHCopy.log");
+    std::ifstream file(filePath);
     if (!file.is_open()) {
         std::cerr << "Unable to open file!" << std::endl;
         //return 1;
@@ -395,6 +446,12 @@ void ReadFile(const std::string& filePath, int64_t snapshotStartTime, int64_t sn
     orderbook.printOrderBook();
     std::cout << "\n\n";
     orderbook.printSnapshots();
+    if (snapshotStartTime == 0) { // if we want to output the last snapshot at snapshotEndTime (only one time is given which is the end time)
+        orderbook.saveSnapshotsTimeToFile(true); 
+    }
+    else { // if we want to output a range of snapshots from snapshotStartTime to snapshotEndTime
+        orderbook.saveSnapshotsTimeToFile(false);
+    }
 }
 
 // function to save orders to a binary file (for faster reading)
@@ -453,11 +510,11 @@ void readOrdersFromBinary(const std::string& binFilename) {
     binaryFile.close();
 }
 
-void getSnapshotInTimeRange(const std::string& filePath, int64_t startSnapshotTime, int64_t endSnapshotTime) {
+void getSnapshotInTimeRange(const std::string& filePath, int64_t startSnapshotTime=0, int64_t endSnapshotTime=0) {
 	// Process orders from startSnapshotTime to endSnapshotTime
     // Inside process order, if the timestamp is between start and end snapshot time, then we'll add it to the snapshots vector
     // Then we'll print the snapshots vector
-    ReadFile("SCH.log", startSnapshotTime, endSnapshotTime);
+    ReadFile(filePath, startSnapshotTime, endSnapshotTime);
 }
 
 
@@ -467,28 +524,31 @@ int main() {
     // file path, modify it to read the file
     std::string filePathTxt = "SCH.log";
     
-    //std::string binaryFilePath = "SCH.bin";
-
-    // Save orders to binary file
-    //saveOrdersToBinary(filePathTxt, binaryFilePath);
-    // Read orders from binary file and process the data to update the order book
-    //readOrdersFromBinary(binaryFilePath);
+   
 
     //orderbook.printOrderBook();
     
-    /*int64_t startSnapshotTime = 1609723805968438719;
-    int64_t endSnapshotTime = 1609723806043326020;*/
+    int64_t startSnapshotTime = 1609723805976270988;
+    int64_t endSnapshotTime = 1609723806144461785;
 
-    int64_t startSnapshotTime = 0;
-    int64_t endSnapshotTime = 1609722900119980000;
+    /*int64_t startSnapshotTime = 0;
+    int64_t endSnapshotTime = 1609722900119980000;*/
 
+    // Get snapshot in time range
+    // In the case of not giving a startSnapshotTime (ie: 0), then it will output the last snapshot at endSnapshotTime
+    // because we only want the top N bids and asks at one specific time, instead of a range of time
     getSnapshotInTimeRange(filePathTxt, startSnapshotTime, endSnapshotTime);
 
     //ReadFile(filePathTxt); // Uncomment this line to read the file
 
 
-
-     //Code below is for testing purposes:
+    // std::string binaryFilePath = "SCH.bin";
+    // Save orders to binary file
+    // saveOrdersToBinary(filePathTxt, binaryFilePath);
+    // Read orders from binary file and process the data to update the order book
+    // readOrdersFromBinary(binaryFilePath);
+    
+    //Code below is for testing purposes only:
    /* OrderBook orderBook;
 
     Order order1 = { 1, 1, "SCH", "BUY", "NEW", 9.6, 4 };
