@@ -59,7 +59,7 @@ private:
     std::vector<Snapshot> snapshots;
     
  public:
-    void processOrder(const Order& order, std::string symbol, int64_t snapshotStartTime = 0, int64_t snapshotEndTime = 0) {
+    void processOrder(const Order& order, std::string symbol, int64_t snapshotStartTime = 0, int64_t snapshotEndTime = 0, int numberOfFields = 5) {
         if (order.side == "BUY") {
             // NEW, CANCEL, TRADE (Modify) cases
             if (order.category == "NEW") {
@@ -246,11 +246,10 @@ private:
             Snapshot newSnapshot;
             newSnapshot.timestamp = order.timestamp;
             newSnapshot.symbol = symbol;
-            std::cout << "SYMBOL: " << newSnapshot.symbol << "\n";
 
             // Get top 5 bids and asks if they exist (ie: get the first five elements of the bids and asks maps if they exist)
-            getTopFiveBids(newSnapshot);
-            getTopFiveAsks(newSnapshot);
+            getTopBids(newSnapshot, numberOfFields);
+            getTopAsks(newSnapshot, numberOfFields);
 
             // Add the snapshot to the vector of snapshots
             snapshots.push_back(newSnapshot);
@@ -287,27 +286,14 @@ private:
     }
 
     void printSnapshots() {
-        // Print the snapshots
-       /* for (auto& snapshot : snapshots) {
-			std::cout << "Timestamp: " << snapshot.timestamp << ", Symbol: " << snapshot.symbol << std::endl;
-			std::cout << "Bids: ";
-			for (auto& bid : snapshot.bidSnapshots) {
-				std::cout << bid << ", ";
-			}
-			std::cout << std::endl;
-			std::cout << "Asks: ";
-			for (auto& ask : snapshot.askSnapshots) {
-				std::cout << ask << ", ";
-			}
-			std::cout << std::endl;
-		}*/
-
+        
         for (auto& snapshot : snapshots) {
-            std::cout << snapshot.symbol << ", " << snapshot.timestamp << " ";
+            std::cout << snapshot.symbol << ", " << snapshot.timestamp << ", ";
             for (auto& bid : snapshot.bidSnapshots) {
                 std::cout << bid << " ";
             }
             std::cout << "X ";
+            
             for (auto& ask : snapshot.askSnapshots) {
                 std::cout << ask << " ";
             }
@@ -315,51 +301,54 @@ private:
         }
     }
 
-    // Get the top 5 bids from the order book. Used for snapshots
-    void getTopFiveBids(Snapshot& snapshot) {
-        // Get the top 5 bids from the bids map (first 5 elements of the map if they exist, otherwise the minimum number of elements that exist)
-        int numElements = std::min(static_cast<int>(bids.size()), 5);
+    // Get the top n bids from the order book. Used for snapshots
+    void getTopBids(Snapshot& snapshot, int numberOfFields) {
+        // Get the top n bids from the bids map (first n elements of the map if they exist, otherwise the minimum number of elements that exist)
+        int numElements = std::min(static_cast<int>(bids.size()), numberOfFields);
 
-        // Get the first 5 elements of the map and add them to the snapshot
+        // Get the first n elements of the map and add them to the snapshot
         for (auto it = bids.begin(); it != bids.end(); ++it) {
-            // Convert double to string with precision of 3 decimal places
             std::ostringstream oss;
-            oss <<  std::setprecision(3) << it->first;
+            oss <<  std::setprecision(5) << it->first;
             std::string priceString = oss.str();
+            // Add the snapshot to the vector of bid snapshots
 			snapshot.bidSnapshots.push_back(std::to_string(it->second.quantity) + "@" + priceString);
             // break if we reach numElements
             if (--numElements == 0) {
 				break;
 			}
 		}
-
+        std::reverse(snapshot.bidSnapshots.begin(), snapshot.bidSnapshots.end());
     }
 
-    // Get the top 5 asks from the order book. Used for snapshots
-    void getTopFiveAsks(Snapshot& snapshot) {
-        // Get the top 5 bids from the bids map (first 5 elements of the map if they exist, otherwise the minimum number of elements that exist)
-        int numElements = std::min(static_cast<int>(asks.size()), 5);
+    // Get the top n asks from the order book. Used for snapshots
+    void getTopAsks(Snapshot& snapshot, int numberOfFields) {
+        // Get the top n bids from the bids map (first n elements of the map if they exist, otherwise the minimum number of elements that exist)
+        int numElements = std::min(static_cast<int>(asks.size()), numberOfFields);
 
-        // Get the first 5 elements of the map and add them to the snapshot
+        // Get the first n elements of the map and add them to the snapshot
         for (auto it = asks.begin(); it != asks.end(); ++it) {
             std::ostringstream oss;
-            oss << std::setprecision(3) << it->first;
+            oss << std::setprecision(5) << it->first;
             std::string priceString = oss.str();
-            snapshot.bidSnapshots.push_back(std::to_string(it->second.quantity) + "@" + priceString);
+            // Add the snapshot to the vector of ask snapshots
+            snapshot.askSnapshots.push_back(std::to_string(it->second.quantity) + "@" + priceString);
             // break if we reach numElements
             if (--numElements == 0) {
                 break;
             }
         }
     }
+
+
 };
 
 
-void ReadFile(const std::string& filePath) 
+void ReadFile(const std::string& filePath, int64_t snapshotStartTime, int64_t snapshotEndTime)
 {
     OrderBook orderbook;
-
-    std::ifstream file("SCH.log");
+    int numberOfFields = 5; // can be modified to get more or less fields for the snapshots
+    std::ifstream file("SCHCopy.log");
     if (!file.is_open()) {
         std::cerr << "Unable to open file!" << std::endl;
         //return 1;
@@ -368,9 +357,9 @@ void ReadFile(const std::string& filePath)
     std::vector<Order> orders;
     std::string line;
 
-    int linesRead = 0;
+    int linesRead = 0; // testing purposes
 
-    while (std::getline(file, line) && linesRead < 30) {
+    while (std::getline(file, line)) {
         std::istringstream iss(line);
         Order order;
 
@@ -379,7 +368,13 @@ void ReadFile(const std::string& filePath)
             continue;
         }
 
-        orders.push_back(order);
+        // check the timestamp of the order,if it's smaller than end time, then process the order.
+        // Inside the process order, it will check the start time too , and if it's between start and end time, then it will add it to the snapshots vector
+        if (order.timestamp <= snapshotEndTime) {
+			orderbook.processOrder(order, "SC", snapshotStartTime, snapshotEndTime);
+		}
+
+        //orders.push_back(order);
 
         linesRead++;
     }
@@ -392,12 +387,13 @@ void ReadFile(const std::string& filePath)
             << ", Quantity: " << order.quantity << std::endl;
     }
 
-    // Process the orders
-    for (auto& order : orders) {
-        orderbook.processOrder(order, "SC");
-    }
+    //// Process the orders
+    //for (auto& order : orders) {
+    //    orderbook.processOrder(order, "SC");
+    //}
 
     orderbook.printOrderBook();
+    std::cout << "\n\n";
     orderbook.printSnapshots();
 }
 
@@ -457,13 +453,21 @@ void readOrdersFromBinary(const std::string& binFilename) {
     binaryFile.close();
 }
 
+void getSnapshotInTimeRange(const std::string& filePath, int64_t startSnapshotTime, int64_t endSnapshotTime) {
+	// Process orders from startSnapshotTime to endSnapshotTime
+    // Inside process order, if the timestamp is between start and end snapshot time, then we'll add it to the snapshots vector
+    // Then we'll print the snapshots vector
+    ReadFile("SCH.log", startSnapshotTime, endSnapshotTime);
+}
+
 
 int main() {
     OrderBook orderbook;
 
-    // file path
+    // file path, modify it to read the file
     std::string filePathTxt = "SCH.log";
-    std::string binaryFilePath = "SCH.bin";
+    
+    //std::string binaryFilePath = "SCH.bin";
 
     // Save orders to binary file
     //saveOrdersToBinary(filePathTxt, binaryFilePath);
@@ -472,6 +476,13 @@ int main() {
 
     //orderbook.printOrderBook();
     
+    /*int64_t startSnapshotTime = 1609723805968438719;
+    int64_t endSnapshotTime = 1609723806043326020;*/
+
+    int64_t startSnapshotTime = 0;
+    int64_t endSnapshotTime = 1609722900119980000;
+
+    getSnapshotInTimeRange(filePathTxt, startSnapshotTime, endSnapshotTime);
 
     //ReadFile(filePathTxt); // Uncomment this line to read the file
 
