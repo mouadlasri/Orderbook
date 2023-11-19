@@ -59,6 +59,7 @@ private:
     std::vector<Snapshot> snapshots;
     
  public:
+    // Process the order and update the order book accordingly
     void processOrder(const Order& order, std::string symbol, int64_t snapshotStartTime = 0, int64_t snapshotEndTime = 0, int numberOfFields = 5) {
         if (order.side == "BUY") {
             // NEW, CANCEL, TRADE (Modify) cases
