@@ -1,4 +1,4 @@
-
+﻿
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -7,6 +7,7 @@
 #include <sstream>
 #include <map>
 #include <algorithm>
+#include <iomanip>
 
 struct Order {
     int64_t timestamp;
@@ -40,6 +41,13 @@ struct CompareAsks {
     }
 };
 
+struct Snapshot {
+    int64_t timestamp;
+    std::string symbol;
+    std::vector<std::string> bidSnapshots;
+    std::vector<std::string> askSnapshots;
+};
+
 class OrderBook
 {
 private:
@@ -47,8 +55,11 @@ private:
     std::map<double, Order, CompareBids> bids; // Buy orders
     std::map<double, Order, CompareAsks> asks; // Sell orders
 
-public:
-    void processOrder(const Order& order) {
+    // Create a vector of snapshots that we will output to a file later after processing the whole order book
+    std::vector<Snapshot> snapshots;
+    
+ public:
+    void processOrder(const Order& order, std::string symbol, int64_t snapshotStartTime = 0, int64_t snapshotEndTime = 0) {
         if (order.side == "BUY") {
             // NEW, CANCEL, TRADE (Modify) cases
             if (order.category == "NEW") {
@@ -70,25 +81,25 @@ public:
                 // Cancel the order at that price by checking orderId with the samePriceOrders vector orderIds, if after cancelling the order (deleting it), the size of the vector is 0, then delete the order at that price from the order book
                 // If the order doesn't exist in the order book, then throw an error
                 if (bids.find(order.price) != bids.end()) {
-					// Check if the orderId exists in the samePriceOrders vector
-					auto it = std::find_if(bids[order.price].samePriceOrders.begin(), bids[order.price].samePriceOrders.end(), [&order](const Order& o) {return o.orderId == order.orderId; });
-					if (it != bids[order.price].samePriceOrders.end()) {
+                    // Check if the orderId exists in the samePriceOrders vector
+                    auto it = std::find_if(bids[order.price].samePriceOrders.begin(), bids[order.price].samePriceOrders.end(), [&order](const Order& o) {return o.orderId == order.orderId; });
+                    if (it != bids[order.price].samePriceOrders.end()) {
                         // Update the price by substracting the quantity of the order that will be deleted from the quantity of the order at that price
                         bids[order.price].quantity -= it->quantity;
-						// Remove the order from the samePriceOrders vector
-						bids[order.price].samePriceOrders.erase(it);
-						// Check if the size of the samePriceOrders vector is 0, if it is, then remove the order at that price from the order book
-						if (bids[order.price].samePriceOrders.size() == 0) {
-							bids.erase(order.price);
-						}
-					}
-					else {
-						std::cout << "Order doesn't exist in the order book" << std::endl;
-					}
-				}
-				else {
-					std::cout << "Order doesn't exist in the order book" << std::endl;
-				}
+                        // Remove the order from the samePriceOrders vector
+                        bids[order.price].samePriceOrders.erase(it);
+                        // Check if the size of the samePriceOrders vector is 0, if it is, then remove the order at that price from the order book
+                        if (bids[order.price].samePriceOrders.size() == 0) {
+                            bids.erase(order.price);
+                        }
+                    }
+                    else {
+                        std::cout << "Order doesn't exist in the order book" << std::endl;
+                    }
+                }
+                else {
+                    std::cout << "Order doesn't exist in the order book" << std::endl;
+                }
             }
 
             else if (order.category == "TRADE") {
@@ -123,8 +134,8 @@ public:
                                 it = bids[order.price].samePriceOrders.erase(it); // Remove the element from the vector
                                 // if size of vector is 0, then remove the order at that price from the order book
                                 if (bids[order.price].samePriceOrders.size() == 0) {
-									bids.erase(order.price);
-								}
+                                    bids.erase(order.price);
+                                }
                             }
                         }
                     }
@@ -162,7 +173,7 @@ public:
                     // Check if the orderId exists in the samePriceOrders vector
                     auto it = std::find_if(asks[order.price].samePriceOrders.begin(), asks[order.price].samePriceOrders.end(), [&order](const Order& o) {return o.orderId == order.orderId; });
                     if (it != asks[order.price].samePriceOrders.end()) {
-         
+
                         // Update the price by substracting the quantity of the order that will be deleted from the quantity of the order at that price
                         asks[order.price].quantity -= it->quantity;
                         // Remove the order from the samePriceOrders vector
@@ -225,7 +236,22 @@ public:
                     std::cout << "Order doesn't exist in the order book" << std::endl;
                 };
             }
-           
+
+        }
+
+        // Add snapshot of the order book to a vector of snapshots
+        // Check if snapshot is between startTime and endTime
+        if (order.timestamp >= snapshotStartTime && order.timestamp <= snapshotEndTime) {
+            // Create a snapshot of the current timestamp, and symbol
+            Snapshot newSnapshot;
+            newSnapshot.timestamp = order.timestamp;
+            newSnapshot.symbol = symbol;
+            // Get top 5 bids and asks if they exist (ie: get the first five elements of the bids and asks maps if they exist)
+            getTopFiveBids(newSnapshot);
+            getTopFiveAsks(newSnapshot);
+
+            // Add the snapshot to the vector of snapshots
+            snapshots.push_back(newSnapshot);
         }
     }
 
@@ -234,7 +260,7 @@ public:
         std::cout << "BID SIDE" << std::endl;
         for (auto& bid : bids) {
             std::cout << "Price: " << bid.first << ", Quantity: " << bid.second.quantity;
-            std::cout << ", Same Price Orders: ";
+            std::cout << ", Orders: ";
             std::cout << "[";
             for (auto& samePriceOrder : bid.second.samePriceOrders) {
                 std::cout << samePriceOrder.quantity << " (" << "id:" << samePriceOrder.orderId << "), ";
@@ -248,13 +274,68 @@ public:
         std::cout << "ASK SIDE" << std::endl;
         for (auto& ask : asks) {
             std::cout << "Price: " << ask.first << ", Quantity: " << ask.second.quantity;
-            std::cout << ", Same Price Orders: ";
+            std::cout << ", Orders: ";
             std::cout << "[";
             for (auto& samePriceOrder : ask.second.samePriceOrders) {
                 std::cout << samePriceOrder.quantity << " (" << "id:" << samePriceOrder.orderId << "), ";
             }
             std::cout << " ]";
             std::cout << std::endl;
+        }
+    }
+
+    void printSnapshots() {
+        // Print the snapshots
+        for (auto& snapshot : snapshots) {
+			std::cout << "Timestamp: " << snapshot.timestamp << ", Symbol: " << snapshot.symbol << std::endl;
+			std::cout << "Bids: ";
+			for (auto& bid : snapshot.bidSnapshots) {
+				std::cout << bid << ", ";
+			}
+			std::cout << std::endl;
+			std::cout << "Asks: ";
+			for (auto& ask : snapshot.askSnapshots) {
+				std::cout << ask << ", ";
+			}
+			std::cout << std::endl;
+		}
+    }
+
+    // Get the top 5 bids from the order book. Used for snapshots
+    void getTopFiveBids(Snapshot& snapshot) {
+        // Get the top 5 bids from the bids map (first 5 elements of the map if they exist, otherwise the minimum number of elements that exist)
+        int numElements = std::min(static_cast<int>(bids.size()), 5);
+
+        // Get the first 5 elements of the map and add them to the snapshot
+        for (auto it = bids.begin(); it != bids.end(); ++it) {
+            // Convert double to string with precision of 3 decimal places
+            std::ostringstream oss;
+            oss <<  std::setprecision(3) << it->first;
+            std::string priceString = oss.str();
+			snapshot.bidSnapshots.push_back(std::to_string(it->second.quantity) + "@" + priceString);
+            // break if we reach numElements
+            if (--numElements == 0) {
+				break;
+			}
+		}
+
+    }
+
+    // Get the top 5 asks from the order book. Used for snapshots
+    void getTopFiveAsks(Snapshot& snapshot) {
+        // Get the top 5 bids from the bids map (first 5 elements of the map if they exist, otherwise the minimum number of elements that exist)
+        int numElements = std::min(static_cast<int>(asks.size()), 5);
+
+        // Get the first 5 elements of the map and add them to the snapshot
+        for (auto it = asks.begin(); it != asks.end(); ++it) {
+            std::ostringstream oss;
+            oss << std::setprecision(3) << it->first;
+            std::string priceString = oss.str();
+            snapshot.bidSnapshots.push_back(std::to_string(it->second.quantity) + "@" + priceString);
+            // break if we reach numElements
+            if (--numElements == 0) {
+                break;
+            }
         }
     }
 };
@@ -264,7 +345,7 @@ void ReadFile(const std::string& filePath)
 {
     OrderBook orderbook;
 
-    std::ifstream file("SCH.log"); // Replace "your_file.txt" with your file's name
+    std::ifstream file("SCH.log");
     if (!file.is_open()) {
         std::cerr << "Unable to open file!" << std::endl;
         //return 1;
@@ -284,6 +365,11 @@ void ReadFile(const std::string& filePath)
             continue;
         }
 
+        // read until timestamp is equal to endTime
+        /*if (order.timestamp > endTime) {
+			break;
+		}*/
+
         orders.push_back(order);
 
         linesRead++;
@@ -299,20 +385,22 @@ void ReadFile(const std::string& filePath)
 
     // Process the orders
     for (auto& order : orders) {
-        orderbook.processOrder(order);
+        orderbook.processOrder(order, "SC");
     }
 
     orderbook.printOrderBook();
-
+    orderbook.printSnapshots();
 }
 
 // function to save orders to a binary file (for faster reading)
+
 void saveOrdersToBinary(const std::string& txtFilename, const std::string& binFilename) {
     std::ifstream file(txtFilename);
     if (!file.is_open()) {
         std::cerr << "Unable to open file!" << std::endl;
         return;
     }
+
 
     std::ofstream binaryFile(binFilename, std::ios::binary);
     if (!binaryFile.is_open()) {
@@ -321,7 +409,9 @@ void saveOrdersToBinary(const std::string& txtFilename, const std::string& binFi
     }
 
     std::string line;
-    while (std::getline(file, line)) {
+    int ordersRead = 0; // testing purposes
+    int limitRead = 10; // testing purposes
+    while (std::getline(file, line) && ordersRead < limitRead) {
         std::istringstream iss(line);
         Order order;
 
@@ -331,24 +421,24 @@ void saveOrdersToBinary(const std::string& txtFilename, const std::string& binFi
         }
 
         binaryFile.write(reinterpret_cast<const char*>(&order), sizeof(Order));
+        ordersRead++;
     }
 
     file.close();
     binaryFile.close();
 }
-
 // function to read orders from a binary file (for faster reading) and print them
-void readOrdersFromBinary(const std::string& binFilename) {
-    std::ifstream binaryFile(binFilename, std::ios::binary);
+// not working properly
+
+void readOrdersFromBinary(const std::string& binFilename) { 
+   std::ifstream binaryFile(binFilename, std::ios::binary);
     if (!binaryFile.is_open()) {
         std::cerr << "Unable to open binary file for reading!" << std::endl;
         return;
     }
 
-    while (binaryFile.peek() != EOF) {
-        Order order;
-        binaryFile.read(reinterpret_cast<char*>(&order), sizeof(Order));
-
+    Order order;
+    while (binaryFile.read(reinterpret_cast<char*>(&order), sizeof(Order))) {
         std::cout << "Epoch: " << order.timestamp << ", Order ID: " << order.orderId
             << ", Symbol: " << order.symbol << ", Side: " << order.side
             << ", Category: " << order.category << ", Price: " << order.price
@@ -358,37 +448,68 @@ void readOrdersFromBinary(const std::string& binFilename) {
     binaryFile.close();
 }
 
+// function to get a snapshot of the order book between two timestamps
+// If someone asks snapshot from T5 ~ T7, you still need to process data from T0, cannot process orders from T5 to T7 only
+// for example:
+//For example,
+//■ Time 0 : add 100@10
+//■ Time 1 : add 200@9
+//■ Time 2 : add 300@8
+//■ Time 3 : trade 100@8
+//■ Snapshot at Time 3 should be 100@10, 200@9, 200@8 by processing data from Time 0 to Time 3
+//■ Time 4 : add 100@11
+//■ Time 5 : trade 100@8
+//■ Time 6 : delete 100@10
+//■ Time 7 : delete 100@11
+//■ Snapshot at Time 7 should be 200@9, 100@8 by processing data from
+//Time 0 to Time 7
+
+void getSnapshot(const std::string& filePath, int64_t startTime, int64_t endTime) {
+    OrderBook orderbook;
+
+    // Read the file and process the orders between the the first timestamp until endTime timestamp
+
+
+    
+}
+
 int main() {
-
-
-// Save orders to binary file
-    saveOrdersToBinary("SCH.log", "SCH.bin");
-    // Read orders from binary file
-    readOrdersFromBinary("SCH.bin");
+    OrderBook orderbook;
 
     // file path
-    std::string filePath = "SCH.log";
-    //ReadFile(filePath); // Uncomment this line to read the file
+    std::string filePathTxt = "SCH.log";
+    std::string binaryFilePath = "SCH.bin";
+
+    // Save orders to binary file
+    //saveOrdersToBinary(filePathTxt, binaryFilePath);
+    // Read orders from binary file and process the data to update the order book
+    //readOrdersFromBinary(binaryFilePath);
+
+    //orderbook.printOrderBook();
+    
+
+    //ReadFile(filePathTxt); // Uncomment this line to read the file
 
 
 
-    // Code below is for testing purposes:
-    //OrderBook orderBook;
+     //Code below is for testing purposes:
+    OrderBook orderBook;
 
-    //Order order1 = { 1, 1, "SCH", "BUY", "NEW", 9.6, 4 };
-    //Order order2 = { 2, 2, "SCH", "BUY", "NEW", 9.5, 6 };
-    //Order order3 = { 4, 8, "SCH", "SELL", "NEW", 9.7, 5 };
-    //Order order4 = { 5, 2, "SCH", "SELL", "NEW", 9.7, 10 };
-    //// 
+    Order order1 = { 1, 1, "SCH", "BUY", "NEW", 9.6, 4 };
+    Order order2 = { 2, 2, "SCH", "BUY", "NEW", 9.5, 6 };
+    Order order3 = { 4, 8, "SCH", "SELL", "NEW", 9.7, 5 };
+    Order order4 = { 6, 2, "SCH", "SELL", "NEW", 9.7, 10 };
+    
 
   
-    //orderBook.processOrder(order1);
-    //orderBook.processOrder(order2);
-    //orderBook.processOrder(order3);
-    //orderBook.processOrder(order4);
-
-    //
-    //orderBook.printOrderBook();
+    orderBook.processOrder(order1, "SC", 1, 5);
+    orderBook.processOrder(order2, "SC", 1, 5);
+    orderBook.processOrder(order3, "SC", 1, 5);
+    orderBook.processOrder(order4, "SC", 1, 5);
+    
+    orderBook.printOrderBook();
+    std::cout << "\n\n";
+    orderBook.printSnapshots();
 
 
     //std::cout << "\n\n\n\n";
