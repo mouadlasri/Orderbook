@@ -246,6 +246,8 @@ private:
             Snapshot newSnapshot;
             newSnapshot.timestamp = order.timestamp;
             newSnapshot.symbol = symbol;
+            std::cout << "SYMBOL: " << newSnapshot.symbol << "\n";
+
             // Get top 5 bids and asks if they exist (ie: get the first five elements of the bids and asks maps if they exist)
             getTopFiveBids(newSnapshot);
             getTopFiveAsks(newSnapshot);
@@ -286,7 +288,7 @@ private:
 
     void printSnapshots() {
         // Print the snapshots
-        for (auto& snapshot : snapshots) {
+       /* for (auto& snapshot : snapshots) {
 			std::cout << "Timestamp: " << snapshot.timestamp << ", Symbol: " << snapshot.symbol << std::endl;
 			std::cout << "Bids: ";
 			for (auto& bid : snapshot.bidSnapshots) {
@@ -298,7 +300,19 @@ private:
 				std::cout << ask << ", ";
 			}
 			std::cout << std::endl;
-		}
+		}*/
+
+        for (auto& snapshot : snapshots) {
+            std::cout << snapshot.symbol << ", " << snapshot.timestamp << " ";
+            for (auto& bid : snapshot.bidSnapshots) {
+                std::cout << bid << " ";
+            }
+            std::cout << "X ";
+            for (auto& ask : snapshot.askSnapshots) {
+                std::cout << ask << " ";
+            }
+            std::cout << std::endl;
+        }
     }
 
     // Get the top 5 bids from the order book. Used for snapshots
@@ -365,11 +379,6 @@ void ReadFile(const std::string& filePath)
             continue;
         }
 
-        // read until timestamp is equal to endTime
-        /*if (order.timestamp > endTime) {
-			break;
-		}*/
-
         orders.push_back(order);
 
         linesRead++;
@@ -427,9 +436,9 @@ void saveOrdersToBinary(const std::string& txtFilename, const std::string& binFi
     file.close();
     binaryFile.close();
 }
+
 // function to read orders from a binary file (for faster reading) and print them
 // not working properly
-
 void readOrdersFromBinary(const std::string& binFilename) { 
    std::ifstream binaryFile(binFilename, std::ios::binary);
     if (!binaryFile.is_open()) {
@@ -448,30 +457,6 @@ void readOrdersFromBinary(const std::string& binFilename) {
     binaryFile.close();
 }
 
-// function to get a snapshot of the order book between two timestamps
-// If someone asks snapshot from T5 ~ T7, you still need to process data from T0, cannot process orders from T5 to T7 only
-// for example:
-//For example,
-//■ Time 0 : add 100@10
-//■ Time 1 : add 200@9
-//■ Time 2 : add 300@8
-//■ Time 3 : trade 100@8
-//■ Snapshot at Time 3 should be 100@10, 200@9, 200@8 by processing data from Time 0 to Time 3
-//■ Time 4 : add 100@11
-//■ Time 5 : trade 100@8
-//■ Time 6 : delete 100@10
-//■ Time 7 : delete 100@11
-//■ Snapshot at Time 7 should be 200@9, 100@8 by processing data from
-//Time 0 to Time 7
-
-void getSnapshot(const std::string& filePath, int64_t startTime, int64_t endTime) {
-    OrderBook orderbook;
-
-    // Read the file and process the orders between the the first timestamp until endTime timestamp
-
-
-    
-}
 
 int main() {
     OrderBook orderbook;
@@ -493,7 +478,7 @@ int main() {
 
 
      //Code below is for testing purposes:
-    OrderBook orderBook;
+   /* OrderBook orderBook;
 
     Order order1 = { 1, 1, "SCH", "BUY", "NEW", 9.6, 4 };
     Order order2 = { 2, 2, "SCH", "BUY", "NEW", 9.5, 6 };
@@ -509,7 +494,7 @@ int main() {
     
     orderBook.printOrderBook();
     std::cout << "\n\n";
-    orderBook.printSnapshots();
+    orderBook.printSnapshots();*/
 
 
     //std::cout << "\n\n\n\n";
