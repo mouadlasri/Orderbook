@@ -396,7 +396,7 @@ void ReadFile(const std::string& filePath, const std::string& symbol, int64_t sn
     std::vector<Order> orders;
     std::string line;
 
-    int linesRead = 0; // testing purposes
+    //int linesRead = 0; // testing purposes
 
     while (std::getline(file, line)) {
         std::istringstream iss(line);
@@ -415,7 +415,7 @@ void ReadFile(const std::string& filePath, const std::string& symbol, int64_t sn
 
         //orders.push_back(order);
 
-        linesRead++;
+        //linesRead++;
     }
 
     file.close();
