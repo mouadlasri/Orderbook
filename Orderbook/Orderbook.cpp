@@ -65,7 +65,40 @@ public:
                 // Add code
             }
             else if (order.category == "TRADE") {
-                // Add code                                  
+                // Check if the order exists in the order book by checking the order price (key of the map)
+                // if it does, and there are enough quantity at that price, then update the quantity (subtract the traded quantity)
+                // and go through the samePriceOrders vector and subtract the traded quantity from the first element of the vector to the last accordingly
+                // if the quantity at that price in samePriceOrders vector reaches 0, then remove the price level from the order book.
+                // if the quantity at that price in samePriceOrders vector is less than 0, then throw an error
+
+                if (bids.find(order.price) != bids.end()) {
+                    // Check if there are enough quantity at that price
+                    if (bids[order.price].quantity >= order.quantity) {
+                        // Update the quantity
+                        bids[order.price].quantity -= order.quantity;
+
+                        int removeQuantity = order.quantity;
+                        for (auto it = bids[order.price].samePriceOrders.begin(); it != bids[order.price].samePriceOrders.end();) {
+                            if (*it >= removeQuantity) {
+                                *it -= removeQuantity;
+                                break; // found enough quantity of orders to subtract from (ie: to trade)
+                            }
+                            else {
+                                removeQuantity -= *it; // Update the removeQuantity to subtract from the next element in the vector
+                                it = asks[order.price].samePriceOrders.erase(it); // Remove the element from the vector
+                            }
+                        };
+
+                        // TODO: Handle the case where the quantity at that price reaches 0 (remove the order from the order book)
+
+                    }
+                    else {
+                        std::cout << "Not enough quantity at that price" << std::endl;
+                    }
+                }
+                else {
+                    std::cout << "Order doesn't exist in the order book" << std::endl;
+                };
             }
         }
         else if (order.side == "SELL") {
@@ -89,7 +122,34 @@ public:
                 // Add code
             }
             else if (order.category == "TRADE") {
-                // Add code                                  
+                if (asks.find(order.price) != asks.end()) {
+                    // Check if there are enough quantity at that price
+                    if (asks[order.price].quantity >= order.quantity) {
+                        // Update the quantity
+                        asks[order.price].quantity -= order.quantity;
+
+                        int removeQuantity = order.quantity;
+                        for (auto it = asks[order.price].samePriceOrders.begin(); it != asks[order.price].samePriceOrders.end();) {
+                            if (*it >= removeQuantity) {
+                                *it -= removeQuantity;
+                                break; // found enough quantity of orders to subtract from (ie: to trade)
+                            }
+                            else {
+                                removeQuantity -= *it; // Update the removeQuantity to subtract from the next element in the vector
+                                it = asks[order.price].samePriceOrders.erase(it); // Remove the element from the vector
+                            }
+                        };
+
+                        // TODO: Handle the case where the quantity at that price reaches 0 (remove the order from the order book)
+
+                    }
+                    else {
+                        std::cout << "Not enough quantity at that price" << std::endl;
+                    }
+                }
+                else {
+                    std::cout << "Order doesn't exist in the order book" << std::endl;
+                };
             }
            
         }
