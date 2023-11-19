@@ -38,8 +38,8 @@ class OrderBook
 {
 private:
     // Key: Price, Value: Vector of Orders (same price) <=> Price Level
-    std::map<double, Order> bids; // Buy orders
-    std::map<double, Order> asks; // Sell orders
+    std::map<double, Order, CompareBids> bids; // Buy orders
+    std::map<double, Order, CompareAsks> asks; // Sell orders
 
 public:
     void processOrder(const Order& order) {
