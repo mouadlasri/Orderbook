@@ -68,7 +68,26 @@ public:
             }
 
             else if (order.category == "CANCEL") {
-                // Add code
+                // Cancel the order at that price by checking orderId with the samePriceOrders vector orderIds, if after cancelling the order (deleting it), the size of the vector is 0, then delete the order at that price from the order book
+                // If the order doesn't exist in the order book, then throw an error
+                if (bids.find(order.price) != bids.end()) {
+					// Check if the orderId exists in the samePriceOrders vector
+					auto it = std::find_if(bids[order.price].samePriceOrders.begin(), bids[order.price].samePriceOrders.end(), [&order](const Order& o) {return o.orderId == order.orderId; });
+					if (it != bids[order.price].samePriceOrders.end()) {
+						// Remove the order from the samePriceOrders vector
+						bids[order.price].samePriceOrders.erase(it);
+						// Check if the size of the samePriceOrders vector is 0, if it is, then remove the order at that price from the order book
+						if (bids[order.price].samePriceOrders.size() == 0) {
+							bids.erase(order.price);
+						}
+					}
+					else {
+						std::cout << "Order doesn't exist in the order book" << std::endl;
+					}
+				}
+				else {
+					std::cout << "Order doesn't exist in the order book" << std::endl;
+				}
 
             
             }
@@ -94,11 +113,18 @@ public:
                                 if (it->quantity == 0) {
                                     bids[order.price].samePriceOrders.erase(it);
                                 }
+                                if (bids[order.price].samePriceOrders.size() == 0) {
+                                    bids.erase(order.price);
+                                }
                                 break; // found enough quantity of orders to subtract from (ie: to trade)
                             }
                             else {
                                 removeQuantity -= it->quantity; // Update the removeQuantity to subtract from the next element in the vector
                                 it = bids[order.price].samePriceOrders.erase(it); // Remove the element from the vector
+                                // if size of vector is 0, then remove the order at that price from the order book
+                                if (bids[order.price].samePriceOrders.size() == 0) {
+									bids.erase(order.price);
+								}
                             }
                         }
 
@@ -161,6 +187,10 @@ public:
                             else {
                                 removeQuantity -= it->quantity; // Update the removeQuantity to subtract from the next element in the vector
                                 it = asks[order.price].samePriceOrders.erase(it); // Remove the element from the vector
+                                // if size of vector is 0, then remove the order at that price from the order book
+                                if (asks[order.price].samePriceOrders.size() == 0) {
+                                    asks.erase(order.price);
+                                }
                             }
                         }
 
@@ -179,9 +209,6 @@ public:
         }
     }
 
-
-   
-
     void printOrderBook() {
         // Print the order book of each side, and their samePriceOrders vectors
         std::cout << "BID SIDE" << std::endl;
@@ -190,13 +217,13 @@ public:
             std::cout << " Same Price Orders: ";
             std::cout << "[";
             for (auto& samePriceOrder : bid.second.samePriceOrders) {
-                std::cout << samePriceOrder.quantity << ",";
+                std::cout << samePriceOrder.quantity << " (" << "id:" << samePriceOrder.orderId << "), ";
             }
             std::cout << " ]";
             std::cout << std::endl;
         }
 
-        std::cout << "\n\n";
+        std::cout << "\n";
 
         std::cout << "ASK SIDE" << std::endl;
         for (auto& ask : asks) {
@@ -204,7 +231,7 @@ public:
             std::cout << " Same Price Orders: ";
             std::cout << "[";
             for (auto& samePriceOrder : ask.second.samePriceOrders) {
-                std::cout << samePriceOrder.quantity << ",";
+                std::cout << samePriceOrder.quantity << " (" << "id:" << samePriceOrder.orderId << "), ";
             }
             std::cout << " ]";
             std::cout << std::endl;
@@ -269,29 +296,30 @@ int main() {
     // Code below is for testing purposes:
     OrderBook orderBook;
 
-    Order order1 = { 1, 1, "SCH", "BUY", "NEW", 9.9, 20 };
-    Order order2 = { 2, 2, "SCH", "SELL", "NEW", 9.7, 30 };
-    Order order3 = { 3, 3, "SCH", "BUY", "NEW", 9.5, 5 };
-    Order order4 = { 3, 3, "SCH", "BUY", "NEW", 9.9, 40 };
-    Order order5 = { 2, 2, "SCH", "SELL", "NEW", 9.7, 15 };
-    Order order6 = { 2, 2, "SCH", "SELL", "NEW", 9.7, 15 };
+    Order order1 = { 1, 1, "SCH", "BUY", "NEW", 9.6, 4 };
+    Order order2 = { 2, 2, "SCH", "BUY", "NEW", 9.5, 6 };
+    Order order3 = { 4, 8, "SCH", "SELL", "NEW", 9.7, 5 };
+    Order order4 = { 5, 2, "SCH", "SELL", "NEW", 9.7, 10 };
+    // 
 
+  
     orderBook.processOrder(order1);
     orderBook.processOrder(order2);
     orderBook.processOrder(order3);
     orderBook.processOrder(order4);
-    orderBook.processOrder(order5);
-    orderBook.processOrder(order6);
 
     orderBook.printOrderBook();
 
     std::cout << "\n\n\n\n";
     // Trade an order
-    Order order7 = { 10, 5, "SCH", "SELL", "TRADE", 9.7, 10 };
-    Order order8 = { 10, 5, "SCH", "SELL", "TRADE", 9.7, 25 };
+    Order order5 = { 6, 8, "SCH", "SELL", "TRADE", 9.7, 4 };
+    Order order6 = { 7, 1, "SCH", "BUY", "TRADE", 9.6, 4 };
+   
+    /* Order order7 = { 8, 5, "SCH", "SELL", "TRADE", 9.7, 10 };
+    Order order8 = { 9, 5, "SCH", "SELL", "TRADE", 9.7, 25 };*/
 
-    orderBook.processOrder(order7);
-    orderBook.processOrder(order8);
+    orderBook.processOrder(order5);
+    orderBook.processOrder(order6);
     orderBook.printOrderBook();
 
 	return 0;
