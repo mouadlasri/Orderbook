@@ -259,5 +259,14 @@ int main() {
 
     orderBook.printOrderBook();
 
+    std::cout << "\n\n\n\n";
+    // Trade an order
+    Order order7 = { 10, 5, "SCH", "SELL", "TRADE", 9.7, 10 };
+    Order order8 = { 10, 5, "SCH", "SELL", "TRADE", 9.7, 25 };
+
+    orderBook.processOrder(order7);
+    orderBook.processOrder(order8);
+    orderBook.printOrderBook();
+
 	return 0;
 }
