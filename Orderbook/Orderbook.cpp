@@ -395,7 +395,7 @@ private:
 };
 
 
-void ReadFile(const std::string& filePath, int64_t snapshotStartTime=0, int64_t snapshotEndTime=0)
+void ReadFile(const std::string& filePath, const std::string& symbol, int64_t snapshotStartTime=0, int64_t snapshotEndTime=0)
 {
     OrderBook orderbook;
     int numberOfFields = 5; // can be modified to get more or less fields for the snapshots
@@ -422,7 +422,7 @@ void ReadFile(const std::string& filePath, int64_t snapshotStartTime=0, int64_t 
         // check the timestamp of the order,if it's smaller than end time, then process the order.
         // Inside the process order, it will check the start time too , and if it's between start and end time, then it will add it to the snapshots vector
         if (order.timestamp <= snapshotEndTime) {
-			orderbook.processOrder(order, "SC", snapshotStartTime, snapshotEndTime);
+			orderbook.processOrder(order, symbol, snapshotStartTime, snapshotEndTime);
 		}
 
         //orders.push_back(order);
@@ -437,11 +437,6 @@ void ReadFile(const std::string& filePath, int64_t snapshotStartTime=0, int64_t 
             << ", Side: " << order.side << ", Category: " << order.category << ", Price: " << order.price
             << ", Quantity: " << order.quantity << std::endl;
     }
-
-    //// Process the orders
-    //for (auto& order : orders) {
-    //    orderbook.processOrder(order, "SC");
-    //}
 
     orderbook.printOrderBook();
     std::cout << "\n\n";
@@ -510,10 +505,10 @@ void readOrdersFromBinary(const std::string& binFilename) {
     binaryFile.close();
 }
 
-void getSnapshotInTimeRange(const std::string& filePath, int64_t startSnapshotTime=0, int64_t endSnapshotTime=0) {
+void getSnapshotInTimeRange(const std::string& filePath, const std::string& symbol, int64_t startSnapshotTime=0, int64_t endSnapshotTime=0) {
 	// Read the file and process the orders, then print and store the snapshots in file
     // Then we'll print the snapshots vector
-    ReadFile(filePath, startSnapshotTime, endSnapshotTime);
+    ReadFile(filePath, symbol, startSnapshotTime, endSnapshotTime);
 }
 
 
@@ -522,7 +517,7 @@ int main() {
 
     // file path, modify it to read the file
     std::string filePathTxt = "SCH.log";
-    
+    std::string symbol = "SCS"; // symbol of the order book (SCS, SCH, etc.)
     //orderbook.printOrderBook();
     
     int64_t startSnapshotTime = 1609723805976270988;
@@ -534,7 +529,7 @@ int main() {
     // Get snapshot in time range
     // In the case of not giving a startSnapshotTime (ie: 0), then it will output the last snapshot at endSnapshotTime
     // because we only want the top N bids and asks at one specific time, instead of a range of time
-    getSnapshotInTimeRange(filePathTxt, startSnapshotTime, endSnapshotTime);
+    getSnapshotInTimeRange(filePathTxt, symbol, startSnapshotTime, endSnapshotTime);
 
 
 
