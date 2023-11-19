@@ -511,8 +511,7 @@ void readOrdersFromBinary(const std::string& binFilename) {
 }
 
 void getSnapshotInTimeRange(const std::string& filePath, int64_t startSnapshotTime=0, int64_t endSnapshotTime=0) {
-	// Process orders from startSnapshotTime to endSnapshotTime
-    // Inside process order, if the timestamp is between start and end snapshot time, then we'll add it to the snapshots vector
+	// Read the file and process the orders, then print and store the snapshots in file
     // Then we'll print the snapshots vector
     ReadFile(filePath, startSnapshotTime, endSnapshotTime);
 }
@@ -524,8 +523,6 @@ int main() {
     // file path, modify it to read the file
     std::string filePathTxt = "SCH.log";
     
-   
-
     //orderbook.printOrderBook();
     
     int64_t startSnapshotTime = 1609723805976270988;
@@ -539,7 +536,6 @@ int main() {
     // because we only want the top N bids and asks at one specific time, instead of a range of time
     getSnapshotInTimeRange(filePathTxt, startSnapshotTime, endSnapshotTime);
 
-    //ReadFile(filePathTxt); // Uncomment this line to read the file
 
 
     // std::string binaryFilePath = "SCH.bin";
