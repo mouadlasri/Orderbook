@@ -378,18 +378,6 @@ private:
 			}
 		}
 
-        /*for (const auto& snapshot : snapshots) {
-            snapshotsFile << snapshot.symbol << ", " << snapshot.timestamp << ", ";
-            for (auto& bid : snapshot.bidSnapshots) {
-                snapshotsFile << bid << " ";
-            }
-            snapshotsFile << "X ";
-
-            for (auto& ask : snapshot.askSnapshots) {
-                snapshotsFile << ask << "  ";
-            }
-            snapshotsFile << std::endl;
-        }*/
         snapshotsFile.close();
     }
 };
