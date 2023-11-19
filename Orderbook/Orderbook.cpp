@@ -306,12 +306,71 @@ void ReadFile(const std::string& filePath)
 
 }
 
+// function to save orders to a binary file (for faster reading)
+void saveOrdersToBinary(const std::string& txtFilename, const std::string& binFilename) {
+    std::ifstream file(txtFilename);
+    if (!file.is_open()) {
+        std::cerr << "Unable to open file!" << std::endl;
+        return;
+    }
+
+    std::ofstream binaryFile(binFilename, std::ios::binary);
+    if (!binaryFile.is_open()) {
+        std::cerr << "Unable to open binary file for writing!" << std::endl;
+        return;
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        Order order;
+
+        if (!(iss >> order.timestamp >> order.orderId >> order.symbol >> order.side >> order.category >> order.price >> order.quantity)) {
+            std::cerr << "Error reading line!" << std::endl;
+            continue;
+        }
+
+        binaryFile.write(reinterpret_cast<const char*>(&order), sizeof(Order));
+    }
+
+    file.close();
+    binaryFile.close();
+}
+
+// function to read orders from a binary file (for faster reading) and print them
+void readOrdersFromBinary(const std::string& binFilename) {
+    std::ifstream binaryFile(binFilename, std::ios::binary);
+    if (!binaryFile.is_open()) {
+        std::cerr << "Unable to open binary file for reading!" << std::endl;
+        return;
+    }
+
+    while (binaryFile.peek() != EOF) {
+        Order order;
+        binaryFile.read(reinterpret_cast<char*>(&order), sizeof(Order));
+
+        std::cout << "Epoch: " << order.timestamp << ", Order ID: " << order.orderId
+            << ", Symbol: " << order.symbol << ", Side: " << order.side
+            << ", Category: " << order.category << ", Price: " << order.price
+            << ", Quantity: " << order.quantity << std::endl;
+    }
+
+    binaryFile.close();
+}
+
 int main() {
 
 
+// Save orders to binary file
+    saveOrdersToBinary("SCH.log", "SCH.bin");
+    // Read orders from binary file
+    readOrdersFromBinary("SCH.bin");
+
     // file path
     std::string filePath = "SCH.log";
-    ReadFile(filePath); // Uncomment this line to read the file
+    //ReadFile(filePath); // Uncomment this line to read the file
+
+
 
     // Code below is for testing purposes:
     //OrderBook orderBook;
