@@ -19,6 +19,21 @@ struct Order {
     std::vector<int> samePriceOrders; // Vector of quantity of orders with the same price
 };
 
+
+// Custom comparator to sort the order book on the BID side in descending order
+struct CompareBids {
+    bool operator()(const double& lhs, const double& rhs) const {
+        return lhs > rhs;
+    }
+};
+
+// Custom comparator to sort the order book on the ASK side in ascending order
+struct CompareAsks {
+    bool operator()(const double& lhs, const double& rhs) const {
+        return lhs < rhs;
+    }
+};
+
 class OrderBook
 {
 private:
