@@ -509,17 +509,18 @@ int main() {
     std::string symbol = "SCS"; // symbol of the order book (SCS, SCH, etc.)
     //orderbook.printOrderBook();
     
+    // Enter the start and end time of the snapshot
     int64_t startSnapshotTime = 1609723805976270988;
     int64_t endSnapshotTime = 1609723806144461785;
-
-    /*int64_t startSnapshotTime = 0;
-    int64_t endSnapshotTime = 1609722900119980000;*/
 
     // Get snapshot in time range
     // In the case of not giving a startSnapshotTime (ie: 0), then it will output the last snapshot at endSnapshotTime
     // because we only want the top N bids and asks at one specific time, instead of a range of time
     getSnapshotInTimeRange(filePathTxt, symbol, startSnapshotTime, endSnapshotTime);
 
+    /*int64_t startSnapshotTime = 0;
+    int64_t endSnapshotTime = 1609722900119980000;*/
+    //getSnapshotInTimeRange(filePathTxt, symbol, startSnapshotTime, endSnapshotTime);
 
 
     // std::string binaryFilePath = "SCH.bin";
