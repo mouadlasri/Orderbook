@@ -127,7 +127,6 @@ public:
 								}
                             }
                         }
-
                     }
                     else {
                         std::cout << "Not enough quantity at that price" << std::endl;
@@ -235,7 +234,7 @@ public:
         std::cout << "BID SIDE" << std::endl;
         for (auto& bid : bids) {
             std::cout << "Price: " << bid.first << ", Quantity: " << bid.second.quantity;
-            std::cout << " Same Price Orders: ";
+            std::cout << ", Same Price Orders: ";
             std::cout << "[";
             for (auto& samePriceOrder : bid.second.samePriceOrders) {
                 std::cout << samePriceOrder.quantity << " (" << "id:" << samePriceOrder.orderId << "), ";
@@ -249,7 +248,7 @@ public:
         std::cout << "ASK SIDE" << std::endl;
         for (auto& ask : asks) {
             std::cout << "Price: " << ask.first << ", Quantity: " << ask.second.quantity;
-            std::cout << " Same Price Orders: ";
+            std::cout << ", Same Price Orders: ";
             std::cout << "[";
             for (auto& samePriceOrder : ask.second.samePriceOrders) {
                 std::cout << samePriceOrder.quantity << " (" << "id:" << samePriceOrder.orderId << "), ";
@@ -263,52 +262,52 @@ public:
 
 void ReadFile(const std::string& filePath) 
 {
-    std::ifstream file(filePath); // Replace "your_file.csv" with your file name
+    OrderBook orderbook;
+
+    std::ifstream file("SCH.log"); // Replace "your_file.txt" with your file's name
     if (!file.is_open()) {
-        std::cerr << "Error opening file!" << std::endl;
-        //return 1; // uncomment this line if you want to exit the function on error
+        std::cerr << "Unable to open file!" << std::endl;
+        //return 1;
     }
 
-    int linesToRead = 10; // REMOVE: Read only 10 lines for now for testing purposes
-
+    std::vector<Order> orders;
     std::string line;
-    while (std::getline(file, line) && linesToRead > 0)  // REMOVE: linesToRead > 0 to read the entire file
-    {
-        std::vector<std::string> tokens;
-        std::istringstream tokenStream(line);
-        std::string token;
 
-        while (tokenStream >> token) { // Using space (' ') as the delimiter
-            tokens.push_back(token);
+    int linesRead = 0;
+
+    while (std::getline(file, line) && linesRead < 30) {
+        std::istringstream iss(line);
+        Order order;
+
+        if (!(iss >> order.timestamp >> order.orderId >> order.symbol >> order.side >> order.category >> order.price >> order.quantity)) {
+            std::cerr << "Error reading line!" << std::endl;
+            continue;
         }
 
-        // Accessing individual fields
-        if (tokens.size() >= 7) { // Ensure at least 7 fields are present
-            std::string epoch = tokens[0];
-            std::string orderId = tokens[1];
-            std::string symbol = tokens[2];
-            std::string orderSide = tokens[3];
-            std::string orderCategory = tokens[4];
-            std::string price = tokens[5];
-            std::string quantity = tokens[6];
+        orders.push_back(order);
 
-            // Process or use the extracted data as needed
-            // Example: Print the fields
-            std::cout << "Epoch: " << epoch << ", Order ID: " << orderId << ", Symbol: " << symbol
-                << ", Order Side: " << orderSide << ", Order Category: " << orderCategory
-                << ", Price: " << price << ", Quantity: " << quantity << std::endl;
-        }
-        else {
-            std::cerr << "Invalid number of fields in line: " << line << std::endl;
-        }
-
-        linesToRead--;
+        linesRead++;
     }
 
     file.close();
+
+    for (const auto& order : orders) {
+        std::cout << "Epoch: " << order.timestamp << ", Order ID: " << order.orderId << ", Symbol: " << order.symbol
+            << ", Side: " << order.side << ", Category: " << order.category << ", Price: " << order.price
+            << ", Quantity: " << order.quantity << std::endl;
+    }
+
+    // Process the orders
+    for (auto& order : orders) {
+        orderbook.processOrder(order);
+    }
+
+    orderbook.printOrderBook();
+
 }
 
 int main() {
+
 
     // file path
     std::string filePath = "SCH.log";
