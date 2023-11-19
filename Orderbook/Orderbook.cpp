@@ -58,7 +58,6 @@ public:
                     bids[order.price] = order;
                     bids[order.price].samePriceOrders.push_back(order);
                 }
-
                 // Case #2: Order at that price already exists in the order book, so add it to the samePriceOrders vector
                 else {
                     // Update the quantity of the order too
@@ -74,6 +73,8 @@ public:
 					// Check if the orderId exists in the samePriceOrders vector
 					auto it = std::find_if(bids[order.price].samePriceOrders.begin(), bids[order.price].samePriceOrders.end(), [&order](const Order& o) {return o.orderId == order.orderId; });
 					if (it != bids[order.price].samePriceOrders.end()) {
+                        // Update the price by substracting the quantity of the order that will be deleted from the quantity of the order at that price
+                        bids[order.price].quantity -= it->quantity;
 						// Remove the order from the samePriceOrders vector
 						bids[order.price].samePriceOrders.erase(it);
 						// Check if the size of the samePriceOrders vector is 0, if it is, then remove the order at that price from the order book
@@ -88,9 +89,8 @@ public:
 				else {
 					std::cout << "Order doesn't exist in the order book" << std::endl;
 				}
-
-            
             }
+
             else if (order.category == "TRADE") {
                 // Check if the order exists in the order book by checking the order price (key of the map)
                 // if it does, and there are enough quantity at that price, then update the quantity (subtract the traded quantity)
@@ -128,8 +128,6 @@ public:
                             }
                         }
 
-                        // TODO: Handle the case where the quantity at that price reaches 0 (remove the order from the order book)
-
                     }
                     else {
                         std::cout << "Not enough quantity at that price" << std::endl;
@@ -159,7 +157,29 @@ public:
             }
 
             else if (order.category == "CANCEL") {
-                // Add code
+                // Cancel the order at that price by checking orderId with the samePriceOrders vector orderIds, if after cancelling the order (deleting it), the size of the vector is 0, then delete the order at that price from the order book
+                // If the order doesn't exist in the order book, then throw an error
+                if (asks.find(order.price) != asks.end()) {
+                    // Check if the orderId exists in the samePriceOrders vector
+                    auto it = std::find_if(asks[order.price].samePriceOrders.begin(), asks[order.price].samePriceOrders.end(), [&order](const Order& o) {return o.orderId == order.orderId; });
+                    if (it != asks[order.price].samePriceOrders.end()) {
+         
+                        // Update the price by substracting the quantity of the order that will be deleted from the quantity of the order at that price
+                        asks[order.price].quantity -= it->quantity;
+                        // Remove the order from the samePriceOrders vector
+                        asks[order.price].samePriceOrders.erase(it);
+                        // Check if the size of the samePriceOrders vector is 0, if it is, then remove the order at that price from the order book
+                        if (asks[order.price].samePriceOrders.size() == 0) {
+                            asks.erase(order.price);
+                        }
+                    }
+                    else {
+                        std::cout << "Order doesn't exist in the order book" << std::endl;
+                    }
+                }
+                else {
+                    std::cout << "Order doesn't exist in the order book" << std::endl;
+                }
             }
             else if (order.category == "TRADE") {
                 // Check if the order exists in the order book by checking the order price (key of the map)
@@ -182,6 +202,10 @@ public:
                                 if (it->quantity == 0) {
                                     asks[order.price].samePriceOrders.erase(it);
                                 }
+                                // if size of vector is 0, then remove the order at that price from the order book
+                                if (asks[order.price].samePriceOrders.size() == 0) {
+                                    asks.erase(order.price);
+                                }
                                 break; // found enough quantity of orders to subtract from (ie: to trade)
                             }
                             else {
@@ -193,9 +217,6 @@ public:
                                 }
                             }
                         }
-
-                        // TODO: Handle the case where the quantity at that price reaches 0 (remove the order from the order book)
-
                     }
                     else {
                         std::cout << "Not enough quantity at that price" << std::endl;
@@ -273,9 +294,9 @@ void ReadFile(const std::string& filePath)
 
             // Process or use the extracted data as needed
             // Example: Print the fields
-            /*std::cout << "Epoch: " << epoch << ", Order ID: " << orderId << ", Symbol: " << symbol
+            std::cout << "Epoch: " << epoch << ", Order ID: " << orderId << ", Symbol: " << symbol
                 << ", Order Side: " << orderSide << ", Order Category: " << orderCategory
-                << ", Price: " << price << ", Quantity: " << quantity << std::endl;*/
+                << ", Price: " << price << ", Quantity: " << quantity << std::endl;
         }
         else {
             std::cerr << "Invalid number of fields in line: " << line << std::endl;
@@ -291,36 +312,40 @@ int main() {
 
     // file path
     std::string filePath = "SCH.log";
-    //ReadFile(filePath); // Uncomment this line to read the file
+    ReadFile(filePath); // Uncomment this line to read the file
 
     // Code below is for testing purposes:
-    OrderBook orderBook;
+    //OrderBook orderBook;
 
-    Order order1 = { 1, 1, "SCH", "BUY", "NEW", 9.6, 4 };
-    Order order2 = { 2, 2, "SCH", "BUY", "NEW", 9.5, 6 };
-    Order order3 = { 4, 8, "SCH", "SELL", "NEW", 9.7, 5 };
-    Order order4 = { 5, 2, "SCH", "SELL", "NEW", 9.7, 10 };
-    // 
+    //Order order1 = { 1, 1, "SCH", "BUY", "NEW", 9.6, 4 };
+    //Order order2 = { 2, 2, "SCH", "BUY", "NEW", 9.5, 6 };
+    //Order order3 = { 4, 8, "SCH", "SELL", "NEW", 9.7, 5 };
+    //Order order4 = { 5, 2, "SCH", "SELL", "NEW", 9.7, 10 };
+    //// 
 
   
-    orderBook.processOrder(order1);
-    orderBook.processOrder(order2);
-    orderBook.processOrder(order3);
-    orderBook.processOrder(order4);
+    //orderBook.processOrder(order1);
+    //orderBook.processOrder(order2);
+    //orderBook.processOrder(order3);
+    //orderBook.processOrder(order4);
 
-    orderBook.printOrderBook();
+    //
+    //orderBook.printOrderBook();
 
-    std::cout << "\n\n\n\n";
-    // Trade an order
-    Order order5 = { 6, 8, "SCH", "SELL", "TRADE", 9.7, 4 };
-    Order order6 = { 7, 1, "SCH", "BUY", "TRADE", 9.6, 4 };
+
+    //std::cout << "\n\n\n\n";
+    //// Trade an order
+    //Order order5 = { 6, 2, "SCH", "SELL", "CANCEL", 9.7, 4 };
+    //// 
+    ////Order order5 = { 6, 8, "SCH", "SELL", "TRADE", 9.7, 4 };
+    //Order order6 = { 7, 1, "SCH", "BUY", "TRADE", 9.6, 4 };
    
-    /* Order order7 = { 8, 5, "SCH", "SELL", "TRADE", 9.7, 10 };
-    Order order8 = { 9, 5, "SCH", "SELL", "TRADE", 9.7, 25 };*/
+    ///* Order order7 = { 8, 5, "SCH", "SELL", "TRADE", 9.7, 10 };
+    //Order order8 = { 9, 5, "SCH", "SELL", "TRADE", 9.7, 25 };*/
 
-    orderBook.processOrder(order5);
-    orderBook.processOrder(order6);
-    orderBook.printOrderBook();
+    //orderBook.processOrder(order5);
+    //orderBook.processOrder(order6);
+    //orderBook.printOrderBook();
 
 	return 0;
 }
