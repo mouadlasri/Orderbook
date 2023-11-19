@@ -97,7 +97,32 @@ public:
 
 
     void printOrderBook() {
-        // Add code
+        // Print the order book of each side, and their samePriceOrders vectors
+        std::cout << "BID SIDE" << std::endl;
+        for (auto& bid : bids) {
+            std::cout << "Price: " << bid.first << ", Quantity: " << bid.second.quantity;
+            std::cout << " Same Price Orders: ";
+            std::cout << "[";
+            for (auto& samePriceOrder : bid.second.samePriceOrders) {
+                std::cout << samePriceOrder << ",";
+            }
+            std::cout << " ]";
+            std::cout << std::endl;
+        }
+
+        std::cout << "\n\n";
+
+        std::cout << "ASK SIDE" << std::endl;
+        for (auto& ask : asks) {
+            std::cout << "Price: " << ask.first << ", Quantity: " << ask.second.quantity;
+            std::cout << " Same Price Orders: ";
+            std::cout << "[";
+            for (auto& samePriceOrder : ask.second.samePriceOrders) {
+                std::cout << samePriceOrder << ",";
+            }
+            std::cout << " ]";
+            std::cout << std::endl;
+        }
     }
 };
 
@@ -153,7 +178,26 @@ int main() {
 
     // file path
     std::string filePath = "SCH.log";
-    ReadFile(filePath);
+    //ReadFile(filePath); // Uncomment this line to read the file
+
+    // Code below is for testing purposes:
+    OrderBook orderBook;
+
+    Order order1 = { 1, 1, "SCH", "BUY", "NEW", 9.9, 20 };
+    Order order2 = { 2, 2, "SCH", "SELL", "NEW", 9.7, 30 };
+    Order order3 = { 3, 3, "SCH", "BUY", "NEW", 9.5, 5 };
+    Order order4 = { 3, 3, "SCH", "BUY", "NEW", 9.9, 40 };
+    Order order5 = { 2, 2, "SCH", "SELL", "NEW", 9.7, 15 };
+    Order order6 = { 2, 2, "SCH", "SELL", "NEW", 9.7, 15 };
+
+    orderBook.processOrder(order1);
+    orderBook.processOrder(order2);
+    orderBook.processOrder(order3);
+    orderBook.processOrder(order4);
+    orderBook.processOrder(order5);
+    orderBook.processOrder(order6);
+
+    orderBook.printOrderBook();
 
 	return 0;
 }
