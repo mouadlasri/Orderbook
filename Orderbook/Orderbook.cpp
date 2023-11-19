@@ -16,9 +16,15 @@ struct Order {
     std::string category; // NEW, CANCEL, TRADE (Modify)
     double price; 
     int quantity;
-    std::vector<int> samePriceOrders; // Vector of quantity of orders with the same price
+    std::vector<Order> samePriceOrders; // Vector of quantity of orders with the same price
+    
 };
 
+struct PriceLevel { // orders at the same specific price
+    int quantity;
+    int orderId;
+    //std::vector<Order> order;
+};
 
 // Custom comparator to sort the order book on the BID side in descending order
 struct CompareBids {
@@ -37,13 +43,12 @@ struct CompareAsks {
 class OrderBook
 {
 private:
-    // Key: Price, Value: Vector of Orders (same price) <=> Price Level
+    // Key: Price, Value: Orders that also contain orders of the same price (unprocessed) <=> Price Level
     std::map<double, Order, CompareBids> bids; // Buy orders
     std::map<double, Order, CompareAsks> asks; // Sell orders
 
 public:
     void processOrder(const Order& order) {
-        
         if (order.side == "BUY") {
             // NEW, CANCEL, TRADE (Modify) cases
             if (order.category == "NEW") {
@@ -51,18 +56,21 @@ public:
                 if (bids.find(order.price) == bids.end()) {
                     // Add the order price as key, and the quantity to the samePriceOrders vector too
                     bids[order.price] = order;
-                    bids[order.price].samePriceOrders.push_back(order.quantity);
+                    bids[order.price].samePriceOrders.push_back(order);
                 }
-                // Case #2: Order at that price already exists in the order book, so add it to the samePriceOrders vector 
+
+                // Case #2: Order at that price already exists in the order book, so add it to the samePriceOrders vector
                 else {
                     // Update the quantity of the order too
                     bids[order.price].quantity += order.quantity;
-                    bids[order.price].samePriceOrders.push_back(order.quantity);
+                    bids[order.price].samePriceOrders.push_back(order);
                 }
             }
 
             else if (order.category == "CANCEL") {
                 // Add code
+
+            
             }
             else if (order.category == "TRADE") {
                 // Check if the order exists in the order book by checking the order price (key of the map)
@@ -78,16 +86,21 @@ public:
                         bids[order.price].quantity -= order.quantity;
 
                         int removeQuantity = order.quantity;
+
                         for (auto it = bids[order.price].samePriceOrders.begin(); it != bids[order.price].samePriceOrders.end();) {
-                            if (*it >= removeQuantity) {
-                                *it -= removeQuantity;
+                            if (it->quantity >= removeQuantity) {
+                                it->quantity -= removeQuantity;
+                                // Remove the order from the order book if the quantity reaches 0 <=> the order has been traded/processed
+                                if (it->quantity == 0) {
+                                    bids[order.price].samePriceOrders.erase(it);
+                                }
                                 break; // found enough quantity of orders to subtract from (ie: to trade)
                             }
                             else {
-                                removeQuantity -= *it; // Update the removeQuantity to subtract from the next element in the vector
-                                it = asks[order.price].samePriceOrders.erase(it); // Remove the element from the vector
+                                removeQuantity -= it->quantity; // Update the removeQuantity to subtract from the next element in the vector
+                                it = bids[order.price].samePriceOrders.erase(it); // Remove the element from the vector
                             }
-                        };
+                        }
 
                         // TODO: Handle the case where the quantity at that price reaches 0 (remove the order from the order book)
 
@@ -106,15 +119,16 @@ public:
             if (order.category == "NEW") {
                 // Case #1: Order at that price doesn't exist in the order book (BID side)
                 if (asks.find(order.price) == asks.end()) {
-                    // Add the order price as key, add the quantity and add the quantity to the samePriceOrders vector too
+                    // Add the order price as key, and the quantity to the samePriceOrders vector too
                     asks[order.price] = order;
-                    asks[order.price].samePriceOrders.push_back(order.quantity);
+                    asks[order.price].samePriceOrders.push_back(order);
                 }
-                // Case #2: Order at that price already exists in the order book, so add it to the samePriceOrders vector 
+
+                // Case #2: Order at that price already exists in the order book, so add it to the samePriceOrders vector
                 else {
                     // Update the quantity of the order too
                     asks[order.price].quantity += order.quantity;
-                    asks[order.price].samePriceOrders.push_back(order.quantity);
+                    asks[order.price].samePriceOrders.push_back(order);
                 }
             }
 
@@ -122,6 +136,11 @@ public:
                 // Add code
             }
             else if (order.category == "TRADE") {
+                // Check if the order exists in the order book by checking the order price (key of the map)
+                // if it does, and there are enough quantity at that price, then update the quantity (subtract the traded quantity)
+                // and go through the samePriceOrders vector and subtract the traded quantity from the first element of the vector to the last accordingly
+                // if the quantity at that price in samePriceOrders vector reaches 0, then remove the price level from the order book.
+                // if the quantity at that price in samePriceOrders vector is less than 0, then throw an error
                 if (asks.find(order.price) != asks.end()) {
                     // Check if there are enough quantity at that price
                     if (asks[order.price].quantity >= order.quantity) {
@@ -129,16 +148,21 @@ public:
                         asks[order.price].quantity -= order.quantity;
 
                         int removeQuantity = order.quantity;
+
                         for (auto it = asks[order.price].samePriceOrders.begin(); it != asks[order.price].samePriceOrders.end();) {
-                            if (*it >= removeQuantity) {
-                                *it -= removeQuantity;
+                            if (it->quantity >= removeQuantity) {
+                                it->quantity -= removeQuantity;
+                                // Remove the order from the order book if the quantity reaches 0 <=> the order has been traded/processed
+                                if (it->quantity == 0) {
+                                    asks[order.price].samePriceOrders.erase(it);
+                                }
                                 break; // found enough quantity of orders to subtract from (ie: to trade)
                             }
                             else {
-                                removeQuantity -= *it; // Update the removeQuantity to subtract from the next element in the vector
+                                removeQuantity -= it->quantity; // Update the removeQuantity to subtract from the next element in the vector
                                 it = asks[order.price].samePriceOrders.erase(it); // Remove the element from the vector
                             }
-                        };
+                        }
 
                         // TODO: Handle the case where the quantity at that price reaches 0 (remove the order from the order book)
 
@@ -156,6 +180,8 @@ public:
     }
 
 
+   
+
     void printOrderBook() {
         // Print the order book of each side, and their samePriceOrders vectors
         std::cout << "BID SIDE" << std::endl;
@@ -164,7 +190,7 @@ public:
             std::cout << " Same Price Orders: ";
             std::cout << "[";
             for (auto& samePriceOrder : bid.second.samePriceOrders) {
-                std::cout << samePriceOrder << ",";
+                std::cout << samePriceOrder.quantity << ",";
             }
             std::cout << " ]";
             std::cout << std::endl;
@@ -178,7 +204,7 @@ public:
             std::cout << " Same Price Orders: ";
             std::cout << "[";
             for (auto& samePriceOrder : ask.second.samePriceOrders) {
-                std::cout << samePriceOrder << ",";
+                std::cout << samePriceOrder.quantity << ",";
             }
             std::cout << " ]";
             std::cout << std::endl;
