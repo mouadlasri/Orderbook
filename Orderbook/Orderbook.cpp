@@ -48,8 +48,17 @@ public:
             // NEW, CANCEL, TRADE (Modify) cases
             if (order.category == "NEW") {
                 // Case #1: Order at that price doesn't exist in the order book (BID side)
-             
+                if (bids.find(order.price) == bids.end()) {
+                    // Add the order price as key, and the quantity to the samePriceOrders vector too
+                    bids[order.price] = order;
+                    bids[order.price].samePriceOrders.push_back(order.quantity);
+                }
                 // Case #2: Order at that price already exists in the order book, so add it to the samePriceOrders vector 
+                else {
+                    // Update the quantity of the order too
+                    bids[order.price].quantity += order.quantity;
+                    bids[order.price].samePriceOrders.push_back(order.quantity);
+                }
             }
 
             else if (order.category == "CANCEL") {
@@ -63,8 +72,17 @@ public:
             // NEW, CANCEL, TRADE (Modify) cases
             if (order.category == "NEW") {
                 // Case #1: Order at that price doesn't exist in the order book (BID side)
-
+                if (asks.find(order.price) == asks.end()) {
+                    // Add the order price as key, add the quantity and add the quantity to the samePriceOrders vector too
+                    asks[order.price] = order;
+                    asks[order.price].samePriceOrders.push_back(order.quantity);
+                }
                 // Case #2: Order at that price already exists in the order book, so add it to the samePriceOrders vector 
+                else {
+                    // Update the quantity of the order too
+                    asks[order.price].quantity += order.quantity;
+                    asks[order.price].samePriceOrders.push_back(order.quantity);
+                }
             }
 
             else if (order.category == "CANCEL") {
